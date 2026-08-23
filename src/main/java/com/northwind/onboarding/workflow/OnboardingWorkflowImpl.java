@@ -1,5 +1,6 @@
 package com.northwind.onboarding.workflow;
 
+import com.northwind.onboarding.model.ApplicationStatus;
 import com.northwind.onboarding.model.OnboardingApplication;
 import com.northwind.onboarding.model.ReviewDecision;
 import io.temporal.activity.ActivityOptions;
@@ -19,6 +20,7 @@ public class OnboardingWorkflowImpl implements OnboardingWorkflow {
     // private static final Duration REVIEW_TIMEOUT = Duration.ofSeconds(30); // ← uncomment for demo
 
     private ReviewDecision reviewDecision = null;
+    private String currentStatus = ApplicationStatus.PENDING.name();
 
     private final OnboardingActivities activities = Workflow.newActivityStub(
             OnboardingActivities.class,
@@ -51,23 +53,28 @@ public class OnboardingWorkflowImpl implements OnboardingWorkflow {
         log.info("Onboarding workflow started for customer {}", application.customerId());
 
         activities.validateAndPersistApplication(workflowId, application);
-        activities.submitToDocumentStore(workflowId, application.documentReference());
+        currentStatus = ApplicationStatus.VALIDATED.name();
 
+        activities.submitToDocumentStore(workflowId, application.documentReference());
+        currentStatus = ApplicationStatus.KYC_IN_PROGRESS.name();
         boolean kycPassed = kycActivities.runKycCheck(workflowId, application.customerId());
 
         if (!kycPassed) {
+            currentStatus = ApplicationStatus.KYC_FAILED.name();
             activities.rejectApplication(workflowId, "KYC check failed");
             return "REJECTED: KYC failed for customer " + application.customerId();
         }
 
-        // Policy v2: run additional document re-verification after KYC passes
+        currentStatus = ApplicationStatus.KYC_PASSED.name();
+
+        // Policy v2: re-verify documents after KYC passes
         int version = Workflow.getVersion("document-reverification-policy", Workflow.DEFAULT_VERSION, 2);
         if (version == 2) {
-            // Simulated: in production this would call a dedicated re-verification activity
             activities.submitToDocumentStore(workflowId,
                     application.documentReference() + "-reverified");
         }
 
+        currentStatus = ApplicationStatus.UNDER_REVIEW.name();
         activities.queueForComplianceReview(workflowId, application.customerId());
 
         log.info("Waiting for compliance review decision (timeout: {})", REVIEW_TIMEOUT);
@@ -75,14 +82,23 @@ public class OnboardingWorkflowImpl implements OnboardingWorkflow {
 
         if (!decidedInTime) {
             activities.escalateReview(workflowId);
-            Workflow.await(() -> reviewDecision != null);
+            currentStatus = ApplicationStatus.ESCALATED.name();
+            // Auto-reject if senior reviewer does not decide within 7 days.
+            boolean seniorDecided = Workflow.await(Duration.ofDays(7), () -> reviewDecision != null);
+            if (!seniorDecided) {
+                currentStatus = ApplicationStatus.REJECTED.name();
+                activities.rejectApplication(workflowId, "senior review timed out — auto-rejected");
+                return "REJECTED: senior review timeout for customer " + application.customerId();
+            }
         }
 
         if (reviewDecision == ReviewDecision.APPROVED) {
+            currentStatus = ApplicationStatus.APPROVED.name();
             activities.activateAccount(workflowId, application.customerId());
             return "APPROVED: account activated for customer " + application.customerId();
         } else {
-            activities.rejectApplicationAfterReview(workflowId);
+            currentStatus = ApplicationStatus.REJECTED.name();
+            activities.rejectApplication(workflowId, "compliance review rejected");
             return "REJECTED: compliance review rejected for customer " + application.customerId();
         }
     }
@@ -91,5 +107,10 @@ public class OnboardingWorkflowImpl implements OnboardingWorkflow {
     public void reviewDecision(ReviewDecision decision) {
         log.info("Received review signal: {}", decision);
         this.reviewDecision = decision;
+    }
+
+    @Override
+    public String getStatus() {
+        return currentStatus;
     }
 }

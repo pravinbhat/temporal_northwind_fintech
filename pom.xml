@@ -17,13 +17,11 @@
     </description>
 
     <properties>
-        <java.version>25</java.version>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.source>25</maven.compiler.source>
-		<maven.compiler.target>25</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>25</maven.compiler.release>
 
         <!-- Dependency versions -->
-		<temporal.version>1.37.0</temporal.version>
+        <temporal.version>1.37.0</temporal.version>
         <jdbi.version>3.45.1</jdbi.version>
         <postgresql.version>42.7.3</postgresql.version>
         <slf4j.version>2.0.17</slf4j.version>
@@ -71,14 +69,19 @@
         </dependency>
     </dependencies>
 
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<version>3.5.2</version>
-			</plugin>
-		</plugins>
-	</build>
-    
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.4.1</version>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

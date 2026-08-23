@@ -39,7 +39,7 @@ src/main/resources/
 ## Prerequisites
 
 | Tool         | Version | Check                |
-| -------------|---------|----------------------|
+| --------------| ---------| ----------------------|
 | Java         | 25+     | `java -version`      |
 | Maven        | 3.9+    | `mvn -version`       |
 | Temporal CLI | latest  | `temporal --version` |
@@ -65,20 +65,43 @@ curl -sSf https://temporal.download/cli.sh | sh
 temporal server start-dev
 ```
 
+View workflow progress in the Temporal Web UI: [localhost:8233](http://localhost:8233)
+
 ### 2. Create the Postgres database and schema
 
 ```bash
+# Create the `northwind` DB in Postgres
 createdb northwind
+
+# macOS: Create the schema (using default user)
+psql -d northwind -f src/main/resources/schema.sql
+
+# Linux: Create the schema (using default user)
 psql -U postgres -d northwind -f src/main/resources/schema.sql
 ```
 
-Default connection settings (override with environment variables):
+Connection settings (configured via environment variables):
 
-| Env var       | Default                                      |
-|---------------|----------------------------------------------|
-| `DB_URL`      | `jdbc:postgresql://localhost:5432/northwind` |
-| `DB_USER`     | `postgres`                                   |
-| `DB_PASSWORD` | `postgres`                                   |
+| Env var       | Required | Default                                      |
+|---------------|----------|----------------------------------------------|
+| `DB_URL`      | No       | `jdbc:postgresql://localhost:5432/northwind` |
+| `DB_USER`     | **Yes**  | —                                            |
+| `DB_PASSWORD` | **Yes**  | —                                            |
+
+Export the required variables before starting any process:
+
+```bash
+export DB_USER=postgres
+export DB_PASSWORD=postgres
+```
+
+### 3. Build the application
+
+Build the project using Maven:
+
+```bash
+mvn clean package
+```
 
 ---
 
@@ -102,7 +125,7 @@ mvn compile exec:java -Dexec.mainClass="com.northwind.onboarding.ReviewServer"
 
 ```bash
 mvn compile exec:java -Dexec.mainClass="com.northwind.onboarding.OnboardingStarter" \
-     -Dexec.args="CUST-001 'Alice Johnson' alice@example.com"
+     -Dexec.args="CUST-001 'Pravin Bhat' bhatman@gotham.com"
 ```
 
 Once KYC passes and the workflow is waiting for compliance review, approve or reject:
@@ -112,5 +135,3 @@ curl -X POST http://localhost:8080/review/<workflowId>/approve
 # or
 curl -X POST http://localhost:8080/review/<workflowId>/reject
 ```
-
-View workflow progress in the Temporal Web UI: `http://localhost:8233`

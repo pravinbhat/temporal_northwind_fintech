@@ -31,13 +31,9 @@ public interface OnboardingActivities {
     @ActivityMethod
     void activateAccount(String workflowId, String customerId);
 
-    /** Reject the application due to KYC failure. */
+    /** Reject the application with the given reason (e.g. KYC failure, compliance review rejection). */
     @ActivityMethod
     void rejectApplication(String workflowId, String reason);
-
-    /** Reject the application after a compliance reviewer decision. */
-    @ActivityMethod
-    void rejectApplicationAfterReview(String workflowId);
 
     /** Record that the 48-hour compliance review timer expired and escalate to a senior reviewer. */
     @ActivityMethod

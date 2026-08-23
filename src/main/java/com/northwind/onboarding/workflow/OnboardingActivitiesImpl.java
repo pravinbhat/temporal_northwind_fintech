@@ -15,6 +15,8 @@ import org.slf4j.LoggerFactory;
 public class OnboardingActivitiesImpl implements OnboardingActivities {
 
     private static final Logger log = LoggerFactory.getLogger(OnboardingActivitiesImpl.class);
+    private static final long SIMULATED_LATENCY_MS = 500;
+    private static final long SIMULATED_LONG_LATENCY_MS = 2000;
 
     private final OnboardingRepository repo;
 
@@ -30,7 +32,8 @@ public class OnboardingActivitiesImpl implements OnboardingActivities {
         repo.insertRequest(workflowId, application);
         repo.appendAudit(workflowId, AuditEvent.APPLICATION_SUBMITTED,
                 "customer=" + application.customerId(), attempt);
-        repo.updateStatusAndAudit(workflowId, ApplicationStatus.PENDING,
+        simulateLatency(SIMULATED_LATENCY_MS);
+        repo.updateStatusAndAudit(workflowId, ApplicationStatus.VALIDATED,
                 AuditEvent.APPLICATION_VALIDATED, null, attempt);
     }
 
@@ -38,8 +41,7 @@ public class OnboardingActivitiesImpl implements OnboardingActivities {
     public void submitToDocumentStore(String workflowId, String documentReference) {
         int attempt = Activity.getExecutionContext().getInfo().getAttempt();
         log.info("[{}] Storing documents (ref={}, attempt {})", workflowId, documentReference, attempt);
-        // Simulated: in production this calls the Document Store API
-        simulateLatency(300);
+        simulateLatency(SIMULATED_LATENCY_MS);
         repo.appendAudit(workflowId, AuditEvent.DOCUMENTS_STORED,
                 "ref=" + documentReference, attempt);
     }
@@ -48,27 +50,22 @@ public class OnboardingActivitiesImpl implements OnboardingActivities {
     public boolean runKycCheck(String workflowId, String customerId) {
         int attempt = Activity.getExecutionContext().getInfo().getAttempt();
         log.info("[{}] Running KYC check for {} (attempt {})", workflowId, customerId, attempt);
-
         repo.updateStatusAndAudit(workflowId, ApplicationStatus.KYC_IN_PROGRESS,
                 AuditEvent.KYC_CHECK_STARTED, "attempt=" + attempt, attempt);
 
         Activity.getExecutionContext().heartbeat("kyc-in-progress-attempt-" + attempt);
+        simulateLatency(SIMULATED_LONG_LATENCY_MS);
 
-        simulateLatency(500);
-
-        boolean forceFail = "true".equalsIgnoreCase(System.getenv("KYC_FORCE_FAIL"));
-
-        if (forceFail) {
+        if ("true".equalsIgnoreCase(System.getenv("KYC_FORCE_FAIL"))) {
             log.warn("[{}] KYC check FAILED (KYC_FORCE_FAIL=true)", workflowId);
             repo.updateStatusAndAudit(workflowId, ApplicationStatus.KYC_FAILED,
                     AuditEvent.KYC_CHECK_FAILED, "forced failure", attempt);
             return false;
         }
 
+        // Simulate transient vendor errors on the first two attempts (demo retry path).
         if (attempt <= 2) {
-            // Simulate transient vendor error on first two attempts
-            log.warn("[{}] KYC vendor transient error on attempt {}",
-                    workflowId, attempt);
+            log.warn("[{}] KYC vendor transient error on attempt {}", workflowId, attempt);
             throw new RuntimeException("KYC vendor temporarily unavailable (attempt " + attempt + ")");
         }
 
@@ -83,8 +80,7 @@ public class OnboardingActivitiesImpl implements OnboardingActivities {
         int attempt = Activity.getExecutionContext().getInfo().getAttempt();
         log.info("[{}] Queuing for compliance review (customer={}, attempt {})",
                 workflowId, customerId, attempt);
-        // Simulated: in production this creates a ticket in the review system
-        simulateLatency(200);
+        simulateLatency(SIMULATED_LATENCY_MS);
         repo.updateStatusAndAudit(workflowId, ApplicationStatus.UNDER_REVIEW,
                 AuditEvent.COMPLIANCE_REVIEW_QUEUED,
                 "awaiting reviewer decision — 48h timer active", attempt);
@@ -95,10 +91,7 @@ public class OnboardingActivitiesImpl implements OnboardingActivities {
         int attempt = Activity.getExecutionContext().getInfo().getAttempt();
         log.info("[{}] Activating account for customer {} (attempt {})",
                 workflowId, customerId, attempt);
-        // Simulated: in production this calls the Account Service API
-        simulateLatency(300);
-        repo.appendAudit(workflowId, AuditEvent.REVIEW_DECISION_RECEIVED,
-                "decision=APPROVED", attempt);
+        simulateLatency(SIMULATED_LATENCY_MS);
         repo.updateStatusAndAudit(workflowId, ApplicationStatus.APPROVED,
                 AuditEvent.ACCOUNT_ACTIVATED, "customer=" + customerId, attempt);
     }
@@ -109,17 +102,6 @@ public class OnboardingActivitiesImpl implements OnboardingActivities {
         log.warn("[{}] Rejecting application (attempt {}): {}", workflowId, attempt, reason);
         repo.updateStatusAndAudit(workflowId, ApplicationStatus.REJECTED,
                 AuditEvent.APPLICATION_REJECTED, reason, attempt);
-    }
-
-    @Override
-    public void rejectApplicationAfterReview(String workflowId) {
-        int attempt = Activity.getExecutionContext().getInfo().getAttempt();
-        log.warn("[{}] Rejecting application after compliance reviewer decision (attempt {})",
-                workflowId, attempt);
-        repo.appendAudit(workflowId, AuditEvent.REVIEW_DECISION_RECEIVED,
-                "decision=REJECTED", attempt);
-        repo.updateStatusAndAudit(workflowId, ApplicationStatus.REJECTED,
-                AuditEvent.APPLICATION_REJECTED, "compliance review rejected", attempt);
     }
 
     @Override

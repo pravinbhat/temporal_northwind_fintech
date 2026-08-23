@@ -1,9 +1,6 @@
 -- =============================================================================
 -- Northwind KYC Onboarding — Database Schema
 -- =============================================================================
--- Run once before starting the application:
---   psql -U postgres -d northwind -f src/main/resources/schema.sql
--- =============================================================================
 
 -- One row per onboarding application; status is the current business state.
 CREATE TABLE IF NOT EXISTS onboarding_requests (

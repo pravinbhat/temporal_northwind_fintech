@@ -3,6 +3,7 @@ package com.northwind.onboarding.model;
 /** Business status of an onboarding application. */
 public enum ApplicationStatus {
     PENDING,        // just submitted, not yet validated
+    VALIDATED,      // passed field/format checks
     KYC_IN_PROGRESS,
     KYC_PASSED,
     KYC_FAILED,

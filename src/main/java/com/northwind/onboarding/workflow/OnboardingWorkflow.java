@@ -2,6 +2,7 @@ package com.northwind.onboarding.workflow;
 
 import com.northwind.onboarding.model.OnboardingApplication;
 import com.northwind.onboarding.model.ReviewDecision;
+import io.temporal.workflow.QueryMethod;
 import io.temporal.workflow.SignalMethod;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
@@ -24,4 +25,8 @@ public interface OnboardingWorkflow {
     /** Called by the compliance reviewer to approve or reject the application. */
     @SignalMethod
     void reviewDecision(ReviewDecision decision);
+
+    /** Returns the current business status (mirrors {@link com.northwind.onboarding.model.ApplicationStatus}). */
+    @QueryMethod
+    String getStatus();
 }

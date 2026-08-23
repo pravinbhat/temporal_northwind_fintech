@@ -11,15 +11,12 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 /**
- * HTTP endpoint for compliance review decisions.
- *
- *   POST /review/{workflowId}/approve   → sends APPROVED decision to the workflow
- *   POST /review/{workflowId}/reject    → sends REJECTED decision to the workflow
- *
- * In a production system this would be a proper REST API secured behind auth,
- * integrated with a compliance UI.
+ * Minimal HTTP server for compliance review decisions.
+ *   POST /review/{workflowId}/approve
+ *   POST /review/{workflowId}/reject
  */
 public class ReviewServer {
 
@@ -75,7 +72,7 @@ public class ReviewServer {
             }
         });
 
-        server.setExecutor(null);
+        server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
         server.start();
 
         log.info("✓ Review server started");
@@ -100,6 +97,7 @@ public class ReviewServer {
 
     private static void sendResponse(com.sun.net.httpserver.HttpExchange exchange, int statusCode, String body) throws IOException {
         byte[] bytes = body.getBytes();
+        exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
         exchange.sendResponseHeaders(statusCode, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {
             os.write(bytes);
