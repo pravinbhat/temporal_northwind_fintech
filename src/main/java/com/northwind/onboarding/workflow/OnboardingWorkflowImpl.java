@@ -14,10 +14,13 @@ public class OnboardingWorkflowImpl implements OnboardingWorkflow {
 
     private static final Logger log = Workflow.getLogger(OnboardingWorkflowImpl.class);
 
-    // Production review timeout is 48 hours. For a quick escalation demo,
-    // swap in Duration.ofSeconds(30) and restart the worker.
+    // Review timeout is 48 hours and escalation timeout is additional 48 hours
+    // For demo swap Duration.ofHours() to Duration.ofSeconds()
     // private static final Duration REVIEW_TIMEOUT = Duration.ofHours(48);
-    private static final Duration REVIEW_TIMEOUT = Duration.ofSeconds(30); // ← uncomment for demo
+    private static final Duration REVIEW_TIMEOUT = Duration.ofSeconds(48);
+
+    // private static final Duration ESCALATED_REVIEW_TIMEOUT = Duration.ofHours(48);
+    private static final Duration ESCALATED_REVIEW_TIMEOUT = Duration.ofSeconds(48);
 
     private ReviewDecision reviewDecision = null;
     private String currentStatus = ApplicationStatus.PENDING.name();
@@ -82,8 +85,8 @@ public class OnboardingWorkflowImpl implements OnboardingWorkflow {
         if (!decidedInTime) {
             activities.escalateReview(workflowId);
             currentStatus = ApplicationStatus.ESCALATED.name();
-            // Auto-reject if senior reviewer does not decide within 7 days.
-            boolean seniorDecided = Workflow.await(Duration.ofDays(7), () -> reviewDecision != null);
+            // Auto-reject if senior reviewer does not decide within timeout.
+            boolean seniorDecided = Workflow.await(ESCALATED_REVIEW_TIMEOUT, () -> reviewDecision != null);
             if (!seniorDecided) {
                 currentStatus = ApplicationStatus.REJECTED.name();
                 activities.rejectApplication(workflowId, "senior review timed out — auto-rejected");

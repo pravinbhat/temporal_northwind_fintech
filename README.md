@@ -2,6 +2,8 @@
 
 A working demonstration of a Temporal-based fintech customer onboarding workflow.
 
+📄 **[View slide deck (PDF)](docs/northwind-kyc-slides.pdf)**
+
 ---
 
 ## Project Structure
