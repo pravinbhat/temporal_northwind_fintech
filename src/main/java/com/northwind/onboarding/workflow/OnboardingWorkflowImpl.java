@@ -16,8 +16,8 @@ public class OnboardingWorkflowImpl implements OnboardingWorkflow {
 
     // Production review timeout is 48 hours. For a quick escalation demo,
     // swap in Duration.ofSeconds(30) and restart the worker.
-    private static final Duration REVIEW_TIMEOUT = Duration.ofHours(48);
-    // private static final Duration REVIEW_TIMEOUT = Duration.ofSeconds(30); // ← uncomment for demo
+    // private static final Duration REVIEW_TIMEOUT = Duration.ofHours(48);
+    private static final Duration REVIEW_TIMEOUT = Duration.ofSeconds(30); // ← uncomment for demo
 
     private ReviewDecision reviewDecision = null;
     private String currentStatus = ApplicationStatus.PENDING.name();
@@ -57,14 +57,13 @@ public class OnboardingWorkflowImpl implements OnboardingWorkflow {
 
         activities.submitToDocumentStore(workflowId, application.documentReference());
         currentStatus = ApplicationStatus.KYC_IN_PROGRESS.name();
-        boolean kycPassed = kycActivities.runKycCheck(workflowId, application.customerId());
 
+        boolean kycPassed = kycActivities.runKycCheck(workflowId, application.customerId());
         if (!kycPassed) {
             currentStatus = ApplicationStatus.KYC_FAILED.name();
             activities.rejectApplication(workflowId, "KYC check failed");
             return "REJECTED: KYC failed for customer " + application.customerId();
         }
-
         currentStatus = ApplicationStatus.KYC_PASSED.name();
 
         // Policy v2: re-verify documents after KYC passes

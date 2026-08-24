@@ -93,6 +93,9 @@ Export the required variables before starting any process:
 ```bash
 export DB_USER=postgres
 export DB_PASSWORD=postgres
+
+# Optionally, if you want to FAIL KYC check
+export KYC_FORCE_FAIL=true
 ```
 
 ### 3. Build the application

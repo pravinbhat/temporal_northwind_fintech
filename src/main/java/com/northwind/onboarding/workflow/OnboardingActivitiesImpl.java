@@ -32,7 +32,9 @@ public class OnboardingActivitiesImpl implements OnboardingActivities {
         repo.insertRequest(workflowId, application);
         repo.appendAudit(workflowId, AuditEvent.APPLICATION_SUBMITTED,
                 "customer=" + application.customerId(), attempt);
+        
         simulateLatency(SIMULATED_LATENCY_MS);
+        
         repo.updateStatusAndAudit(workflowId, ApplicationStatus.VALIDATED,
                 AuditEvent.APPLICATION_VALIDATED, null, attempt);
     }
@@ -41,7 +43,9 @@ public class OnboardingActivitiesImpl implements OnboardingActivities {
     public void submitToDocumentStore(String workflowId, String documentReference) {
         int attempt = Activity.getExecutionContext().getInfo().getAttempt();
         log.info("[{}] Storing documents (ref={}, attempt {})", workflowId, documentReference, attempt);
+        
         simulateLatency(SIMULATED_LATENCY_MS);
+        
         repo.appendAudit(workflowId, AuditEvent.DOCUMENTS_STORED,
                 "ref=" + documentReference, attempt);
     }
@@ -80,7 +84,9 @@ public class OnboardingActivitiesImpl implements OnboardingActivities {
         int attempt = Activity.getExecutionContext().getInfo().getAttempt();
         log.info("[{}] Queuing for compliance review (customer={}, attempt {})",
                 workflowId, customerId, attempt);
+        
         simulateLatency(SIMULATED_LATENCY_MS);
+        
         repo.updateStatusAndAudit(workflowId, ApplicationStatus.UNDER_REVIEW,
                 AuditEvent.COMPLIANCE_REVIEW_QUEUED,
                 "awaiting reviewer decision — 48h timer active", attempt);
@@ -91,7 +97,9 @@ public class OnboardingActivitiesImpl implements OnboardingActivities {
         int attempt = Activity.getExecutionContext().getInfo().getAttempt();
         log.info("[{}] Activating account for customer {} (attempt {})",
                 workflowId, customerId, attempt);
+        
         simulateLatency(SIMULATED_LATENCY_MS);
+        
         repo.updateStatusAndAudit(workflowId, ApplicationStatus.APPROVED,
                 AuditEvent.ACCOUNT_ACTIVATED, "customer=" + customerId, attempt);
     }
